@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Demo</title>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+        .mindar-ui-loading { display: none !important; }
+        #playButton {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            padding: 20px 40px; background: rgba(0, 0, 0, 0.8); color: white;
+            border-radius: 15px; font-size: 22px; font-weight: bold;
+            z-index: 1000; display: none; font-family: sans-serif; border: 2px solid #fff;
+        }
+    </style>
+</head>
+<body>
+    <div id="playButton">タップして再生</div>
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+        <a-assets>
+            <video id="videoElement" src="./video.mp4" preload="auto" loop crossorigin="anonymous" webkit-playsinline playsinline></video>
+        </a-assets>
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <a-entity id="target" mindar-image-target="targetIndex: 0">
+            <a-video src="#videoElement" position="0 0 0" rotation="0 0 0" width="1.2" height="2.1"></a-video>
+        </a-entity>
+    </a-scene>
+    <script>
+        const video = document.getElementById('videoElement');
+        const button = document.getElementById('playButton');
+        const target = document.getElementById('target');
+        target.addEventListener('targetFound', () => { button.style.display = 'block'; });
+        target.addEventListener('targetLost', () => { button.style.display = 'none'; video.pause(); });
+        button.addEventListener('click', () => {
+            video.muted = false; video.volume = 1.0; video.play();
+            button.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
