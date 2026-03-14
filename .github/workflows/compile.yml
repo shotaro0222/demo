@@ -8,26 +8,33 @@ on:
 jobs:
   compile:
     runs-on: ubuntu-latest
+    # 書き込み権限を確実に与える設定
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 全履歴を取得してPushエラーを防ぐ
+          fetch-depth: 0
 
-      - name: Install Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
 
       - name: Compile MindAR Targets
         run: |
+          # imagesフォルダを大文字小文字問わず検索
           find . -type d -iname "images" | while read dir; do
             target_dir=$(dirname "$dir")
+            
+            # フォルダが空でないか確認
             if [ "$(ls -A "$dir")" ]; then
-              echo "✅ Compiling in $dir..."
-              # npxでコンパイラ実行
+              echo "✅ Processing $target_dir..."
+              # npxでコンパイラを実行（場所の不一致を防ぐ）
               npx mind-ar-compiler "$dir" "$target_dir/targets.mind"
+            else
+              echo "⚠️ Skipping $target_dir... No images found."
             fi
           done
 
@@ -36,13 +43,14 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # 💡 強制的にすべての .mind ファイルを Git の管理下に入れる
+          # 生成された.mindファイルを強制的にGitへ追加
           find . -name "targets.mind" -exec git add -f {} +
           
-          # 💡 差分があろうとなかろうと、現在の状態を強制コミットする
-          if git commit -m "Automated update: targets.mind $(date)"; then
-            # メインブランチに直接押し込む
+          # 変更がある場合のみ、実行番号を含めたメッセージでコミット
+          if ! git diff --cached --exit-code; then
+            git commit -m "Automated update: targets.mind (Run #${{ github.run_number }})"
+            # 現在のブランチ(main)へ強制的に押し込む
             git push origin HEAD:main --force
           else
-            echo "No changes to commit"
+            echo "No changes detected. Nothing to commit."
           fi
