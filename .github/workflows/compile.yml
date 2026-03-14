@@ -1,21 +1,21 @@
-name: Compile Multiple MindAR Targets
+name: Compile MindAR Targets
 
 on:
   push:
     paths:
-      - '**/[iI]mages/**'
-  workflow_dispatch: # 手動実行ボタンを有効化
+      - '**/images/**'
+      - '**/Images/**'
+  workflow_dispatch:
 
 jobs:
   compile:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # リポジトリへの書き込み権限を明示
+      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          # 💡 認証トークンを使用して、書き込みを許可させる
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
@@ -26,27 +26,35 @@ jobs:
 
       - name: Compile MindAR Targets
         run: |
+          # imagesフォルダを検索してループ処理
           find . -type d -iname "images" | while read dir; do
             target_dir=$(dirname "$dir")
+            
+            # フォルダ内にファイルがある場合のみ実行
             if [ "$(ls -A "$dir")" ]; then
-              echo "✅ Compiling in $target_dir..."
-              npx mind-ar-compiler "$dir" "$target_dir/targets.mind"
+              echo "✅ Processing $target_dir..."
+              
+              # 💡 正しいパッケージ名「mind-ar-js-compiler」を使用
+              npx mind-ar-js-compiler "$dir" "$target_dir/targets.mind"
+              
+              # 生成確認のデバッグ表示
+              if [ -f "$target_dir/targets.mind" ]; then
+                echo "📊 Created: $target_dir/targets.mind ($(du -h "$target_dir/targets.mind" | cut -f1))"
+              fi
             fi
           done
 
       - name: Commit and Push
         run: |
-          # ユーザー設定
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # 作成されたファイルをすべて強制追加
-          git add -f "**/targets.mind"
+          # 生成された.mindファイルをすべてGitに追加
+          git add "**/targets.mind"
           
-          # 変更がある場合のみコミット
-          if git commit -m "Automated update: targets.mind (Run #${{ github.run_number }})"; then
-            # mainブランチに直接プッシュ（HEADではなく明示的にmainを指定）
-            git push origin main
+          # 変更がある場合のみコミットしてプッシュ
+          if git commit -m "chore: automated update of targets.mind (Run #${{ github.run_number }})"; then
+            git push origin HEAD:main --force
           else
-            echo "No changes to commit"
+            echo "No changes to commit."
           fi
