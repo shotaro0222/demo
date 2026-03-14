@@ -18,14 +18,15 @@ jobs:
 
       - name: Compile MindAR Targets
         run: |
-          # imagesフォルダを持つすべてのディレクトリをループ処理
           for dir in $(find . -type d -name "images"); do
             target_dir=$(dirname "$dir")
-            echo "Processing $target_dir..."
+            echo "Checking directory: $dir"
             
-            # npxコマンドを使用して、インストールなしで直接コンパイラを呼び出します
-            # これにより「コマンドが見つからない」エラー(127)を回避します
-            npx mind-ar-compiler "$dir" "$target_dir/targets.mind"
+            # フォルダの中身を表示（デバッグ用）
+            ls -R "$dir"
+            
+            # コンパイル実行（エラーメッセージを詳細に出力）
+            npx mind-ar-compiler "$dir" "$target_dir/targets.mind" || { echo "Compilation failed in $dir"; exit 1; }
           done
 
       - name: Commit and Push
