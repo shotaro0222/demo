@@ -3,12 +3,11 @@ name: Compile Multiple MindAR Targets
 on:
   push:
     paths:
-      - '**/images/**'
+      - '**/[iI]mages/**'  # 大文字小文字どちらのimagesでも反応するように
 
 jobs:
   compile:
     runs-on: ubuntu-latest
-    # 💡 書き込み権限を明示的に指定します
     permissions:
       contents: write
     steps:
@@ -24,13 +23,18 @@ jobs:
 
       - name: Compile MindAR Targets
         run: |
-          for dir in $(find . -type d -name "images"); do
+          # 大文字小文字を区別せず "images" フォルダを探す
+          find . -type d -iname "images" | while read dir; do
             target_dir=$(dirname "$dir")
-            if ls "$dir"/*.{jpg,JPG,png,PNG} >/dev/null 2>&1; then
-              echo "✅ Processing $target_dir..."
+            
+            # 💡 判定を強化：そのフォルダ内（サブフォルダ含む）に画像が1枚でもあるか
+            if find "$dir" -maxdepth 2 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) | grep -q .; then
+              echo "✅ Found images in $dir. Compiling..."
               ./node_modules/.bin/mindar-image-compiler "$dir" "$target_dir/targets.mind"
             else
-              echo "⚠️ Skipping $target_dir... No images."
+              echo "⚠️ Skipping $target_dir... No images found in $dir"
+              # デバッグ用にフォルダの中身を表示
+              ls -a "$dir"
             fi
           done
 
@@ -38,14 +42,10 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          
-          # 生成された.mindファイルを探して追加
           find . -name "targets.mind" | xargs -r git add
-          
-          # 変更（差分）がある場合のみコミットしてプッシュ
           if ! git diff --cached --exit-code; then
             git commit -m "Automated compile: target.mind updated"
-            git push
+            git push origin main
           else
             echo "No changes to commit"
           fi
