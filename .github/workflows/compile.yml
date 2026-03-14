@@ -16,17 +16,22 @@ jobs:
         with:
           node-version: '18'
 
+      - name: Install MindAR
+        run: npm install mind-ar
+
       - name: Compile MindAR Targets
         run: |
+          # 全ての images フォルダを検索
           for dir in $(find . -type d -name "images"); do
             target_dir=$(dirname "$dir")
-            echo "Checking directory: $dir"
             
-            # フォルダの中身を表示（デバッグ用）
-            ls -R "$dir"
-            
-            # コンパイル実行（エラーメッセージを詳細に出力）
-            npx mind-ar-compiler "$dir" "$target_dir/targets.mind" || { echo "Compilation failed in $dir"; exit 1; }
+            # 💡 修正ポイント: フォルダ内に画像(jpg/png)があるかチェック
+            if ls "$dir"/*.{jpg,JPG,png,PNG} >/dev/null 2>&1; then
+              echo "✅ Processing $target_dir... images found."
+              ./node_modules/.bin/mindar-image-compiler "$dir" "$target_dir/targets.mind"
+            else
+              echo "⚠️ Skipping $target_dir... No supported images found."
+            fi
           done
 
       - name: Commit and Push
@@ -34,6 +39,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add "**/targets.mind"
+          # 変更がある場合のみコミット
           if ! git diff --cached --exit-code; then
             git commit -m "Automated compile: target.mind updated"
             git push
