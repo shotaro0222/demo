@@ -4,17 +4,18 @@ on:
   push:
     paths:
       - '**/[iI]mages/**'
+  workflow_dispatch: # 💡 手動でも実行できるようにする
 
 jobs:
   compile:
     runs-on: ubuntu-latest
-    # 書き込み権限を確実に与える設定
     permissions:
-      contents: write
+      contents: write # 💡 権限を明示
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.GITHUB_TOKEN }} # 💡 認証を通す
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -24,17 +25,11 @@ jobs:
 
       - name: Compile MindAR Targets
         run: |
-          # imagesフォルダを大文字小文字問わず検索
           find . -type d -iname "images" | while read dir; do
             target_dir=$(dirname "$dir")
-            
-            # フォルダが空でないか確認
             if [ "$(ls -A "$dir")" ]; then
-              echo "✅ Processing $target_dir..."
-              # npxでコンパイラを実行（場所の不一致を防ぐ）
+              echo "✅ Compiling in $target_dir..."
               npx mind-ar-compiler "$dir" "$target_dir/targets.mind"
-            else
-              echo "⚠️ Skipping $target_dir... No images found."
             fi
           done
 
@@ -43,14 +38,12 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # 生成された.mindファイルを強制的にGitへ追加
+          # 作成されたファイルを強制追加
           find . -name "targets.mind" -exec git add -f {} +
           
-          # 変更がある場合のみ、実行番号を含めたメッセージでコミット
-          if ! git diff --cached --exit-code; then
-            git commit -m "Automated update: targets.mind (Run #${{ github.run_number }})"
-            # 現在のブランチ(main)へ強制的に押し込む
+          # 履歴に強制的に刻む
+          if git commit -m "chore: update targets.mind [skip ci]"; then
             git push origin HEAD:main --force
           else
-            echo "No changes detected. Nothing to commit."
+            echo "No changes to commit"
           fi
