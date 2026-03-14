@@ -3,7 +3,7 @@ name: Compile Multiple MindAR Targets
 on:
   push:
     paths:
-      - '**/[iI]mages/**'  # 大文字小文字どちらのimagesでも反応するように
+      - '**/[iI]mages/**'
 
 jobs:
   compile:
@@ -11,30 +11,23 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 全履歴を取得してPushエラーを防ぐ
 
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
 
-      - name: Install MindAR
-        run: npm install mind-ar
-
       - name: Compile MindAR Targets
         run: |
-          # 大文字小文字を区別せず "images" フォルダを探す
           find . -type d -iname "images" | while read dir; do
             target_dir=$(dirname "$dir")
-            
-            # 💡 判定を強化：そのフォルダ内（サブフォルダ含む）に画像が1枚でもあるか
-            if find "$dir" -maxdepth 2 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) | grep -q .; then
-              echo "✅ Found images in $dir. Compiling..."
-              ./node_modules/.bin/mindar-image-compiler "$dir" "$target_dir/targets.mind"
-            else
-              echo "⚠️ Skipping $target_dir... No images found in $dir"
-              # デバッグ用にフォルダの中身を表示
-              ls -a "$dir"
+            if [ "$(ls -A "$dir")" ]; then
+              echo "✅ Compiling in $dir..."
+              # npxでコンパイラ実行
+              npx mind-ar-compiler "$dir" "$target_dir/targets.mind"
             fi
           done
 
@@ -42,10 +35,14 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          find . -name "targets.mind" | xargs -r git add
-          if ! git diff --cached --exit-code; then
-            git commit -m "Automated compile: target.mind updated"
-            git push origin main
+          
+          # 💡 強制的にすべての .mind ファイルを Git の管理下に入れる
+          find . -name "targets.mind" -exec git add -f {} +
+          
+          # 💡 差分があろうとなかろうと、現在の状態を強制コミットする
+          if git commit -m "Automated update: targets.mind $(date)"; then
+            # メインブランチに直接押し込む
+            git push origin HEAD:main --force
           else
             echo "No changes to commit"
           fi
