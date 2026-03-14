@@ -4,18 +4,19 @@ on:
   push:
     paths:
       - '**/[iI]mages/**'
-  workflow_dispatch: # 💡 手動でも実行できるようにする
+  workflow_dispatch: # 手動実行ボタンを有効化
 
 jobs:
   compile:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 💡 権限を明示
+      contents: write # リポジトリへの書き込み権限を明示
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }} # 💡 認証を通す
+          # 💡 認証トークンを使用して、書き込みを許可させる
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -35,15 +36,17 @@ jobs:
 
       - name: Commit and Push
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          # ユーザー設定
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           
-          # 作成されたファイルを強制追加
-          find . -name "targets.mind" -exec git add -f {} +
+          # 作成されたファイルをすべて強制追加
+          git add -f "**/targets.mind"
           
-          # 履歴に強制的に刻む
-          if git commit -m "chore: update targets.mind [skip ci]"; then
-            git push origin HEAD:main --force
+          # 変更がある場合のみコミット
+          if git commit -m "Automated update: targets.mind (Run #${{ github.run_number }})"; then
+            # mainブランチに直接プッシュ（HEADではなく明示的にmainを指定）
+            git push origin main
           else
             echo "No changes to commit"
           fi
