@@ -4,7 +4,6 @@ on:
   push:
     paths:
       - '**/images/**'
-      - '**/Images/**'
   workflow_dispatch:
 
 jobs:
@@ -17,29 +16,28 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
 
+      - name: Install MindAR
+        # 💡 本体をインストールし、コンパイラを直接実行できる環境を作ります
+        run: npm install mind-ar@1.1.4
+
       - name: Compile MindAR Targets
         run: |
-          # imagesフォルダを検索してループ処理
           find . -type d -iname "images" | while read dir; do
             target_dir=$(dirname "$dir")
-            
-            # フォルダ内にファイルがある場合のみ実行
             if [ "$(ls -A "$dir")" ]; then
-              echo "✅ Processing $target_dir..."
+              echo "✅ Compiling for $target_dir..."
               
-              # 💡 正しいパッケージ名「mind-ar-js-compiler」を使用
-              npx mind-ar-js-compiler "$dir" "$target_dir/targets.mind"
+              # 💡 node_modulesの中にあるコンパイラを直接実行
+              ./node_modules/.bin/mind-ar-compiler "$dir" "$target_dir/targets.mind"
               
-              # 生成確認のデバッグ表示
               if [ -f "$target_dir/targets.mind" ]; then
-                echo "📊 Created: $target_dir/targets.mind ($(du -h "$target_dir/targets.mind" | cut -f1))"
+                echo "📊 Created: $target_dir/targets.mind"
               fi
             fi
           done
@@ -48,13 +46,9 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
-          # 生成された.mindファイルをすべてGitに追加
           git add "**/targets.mind"
-          
-          # 変更がある場合のみコミットしてプッシュ
-          if git commit -m "chore: automated update of targets.mind (Run #${{ github.run_number }})"; then
+          if git commit -m "chore: update targets.mind (Run #${{ github.run_number }})"; then
             git push origin HEAD:main --force
           else
-            echo "No changes to commit."
+            echo "No changes to commit"
           fi
