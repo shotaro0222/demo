@@ -1,30 +1,43 @@
 name: Compile Multiple MindAR Targets
+
 on:
   push:
     paths:
       - '**/images/**'
+
 jobs:
   compile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+
       - name: Install MindAR Compiler
-        run: npm install -g mind-ar
+        # グローバルではなくローカルにインストールします
+        run: npm install mind-ar
+
       - name: Compile All Demos
         run: |
+          # インストールした実行ファイルのパスを直接指定して動かします
           for dir in $(find . -type d -name "images"); do
             target_dir=$(dirname "$dir")
             echo "Compiling in $target_dir..."
-            mindar-image-compiler "$dir" "$target_dir/targets.mind"
+            ./node_modules/.bin/mindar-image-compiler "$dir" "$target_dir/targets.mind"
           done
+
       - name: Commit and Push
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add "**/targets.mind"
-          git commit -m "Automated compile: target.mind updated" || echo "No changes to commit"
-          git push
+          # 変化がない場合にエラーにならないよう、差分チェックを入れてからコミットします
+          if ! git diff --cached --exit-code; then
+            git commit -m "Automated compile: target.mind updated"
+            git push
+          else
+            echo "No changes to commit"
+          fi
