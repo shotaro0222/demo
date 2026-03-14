@@ -17,12 +17,12 @@ jobs:
           node-version: '18'
 
       - name: Install MindAR Compiler
-        # グローバルではなくローカルにインストールします
+        # グローバルではなく、この作業場所（ローカル）にインストールします
         run: npm install mind-ar
 
       - name: Compile All Demos
         run: |
-          # インストールした実行ファイルのパスを直接指定して動かします
+          # インストールした実行ファイルの場所（./node_modules/.bin/）を直接指定して実行します
           for dir in $(find . -type d -name "images"); do
             target_dir=$(dirname "$dir")
             echo "Compiling in $target_dir..."
@@ -34,7 +34,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add "**/targets.mind"
-          # 変化がない場合にエラーにならないよう、差分チェックを入れてからコミットします
+          # 変更がある場合のみコミットし、ない場合はスキップする設定です
           if ! git diff --cached --exit-code; then
             git commit -m "Automated compile: target.mind updated"
             git push
