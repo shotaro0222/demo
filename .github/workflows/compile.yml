@@ -46,3 +46,21 @@ jobs:
           else
             echo "No changes to commit"
           fi
+          
+- name: Commit and Push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # 念のため、生成されたファイルがあるか確認するログを追加
+          ls -R
+          
+          find . -name "targets.mind" | xargs -r git add
+          
+          if ! git diff --cached --exit-code; then
+            git commit -m "Automated compile: target.mind updated"
+            # 💡 権限エラーを避けるため、トークンを使用してプッシュするように指定
+            git push origin main
+          else
+            echo "No changes to commit"
+          fi
