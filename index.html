@@ -3,7 +3,7 @@
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="UTF-8">
-    <title>AR Demo System</title>
+    <title>Simple AR GLB</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -14,63 +14,35 @@
         position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
         padding: 20px 40px; font-size: 20px; font-weight: bold;
         background-color: #007bff; color: white; border: none; border-radius: 50px;
-        z-index: 9999; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        z-index: 1000; cursor: pointer;
       }
     </style>
   </head>
   
   <body>
-    <button id="startButton">ARデモを開始</button>
+    <button id="startButton">ARスタート</button>
 
-    <a-scene 
-      mindar-image="imageTargetSrc: target.mind; autoStart: false; uiScanning: no;" 
-      color-space="sRGB" 
-      renderer="colorManagement: true, physicallyCorrectLights" 
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: false">
+    <a-scene mindar-image="imageTargetSrc: target.mind; autoStart: false; uiScanning: no;" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
       
       <a-assets>
-        <a-asset-item id="myModel" src="sample.glb"></a-asset-item>
+        <a-asset-item id="glbModel" src="sample.glb"></a-asset-item>
       </a-assets>
       
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <a-entity id="target" mindar-image-target="targetIndex: 0">
-        <a-gltf-model 
-          id="glbEntity" 
-          src="#myModel" 
-          position="0 0 0" 
-          scale="1 1 1" 
-          rotation="90 0 0" 
-          animation-mixer="timeScale: 0">
-        </a-gltf-model>
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-gltf-model src="#glbModel" position="0 0 0" scale="1 1 1" rotation="90 0 0" animation-mixer></a-gltf-model>
       </a-entity>
     </a-scene>
 
     <script>
       const startButton = document.querySelector('#startButton');
       const sceneEl = document.querySelector('a-scene');
-      const glb = document.querySelector('#glbEntity');
-      const target = document.querySelector('#target');
 
       startButton.addEventListener('click', () => {
-        const arSystem = sceneEl.systems['mindar-image-system'];
-        if (arSystem) {
-          arSystem.start(); // 明示的にシステムを起動
-        }
+        // ボタンを押した瞬間にシステムを叩き起こす
+        sceneEl.systems['mindar-image-system'].start();
         startButton.style.display = 'none';
-      });
-
-      // マーカーが見つかった時
-      target.addEventListener('targetFound', () => {
-        console.log("Target Found!");
-        if(glb) glb.setAttribute('animation-mixer', {timeScale: 1});
-      });
-
-      // マーカーを見失った時
-      target.addEventListener('targetLost', () => {
-        console.log("Target Lost");
-        if(glb) glb.setAttribute('animation-mixer', {timeScale: 0});
       });
     </script>
   </body>
