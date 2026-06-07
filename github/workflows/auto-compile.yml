@@ -1,0 +1,52 @@
+name: Auto Compile MindAR Targets
+
+# source_images フォルダに画像が追加・更新された時だけ自動起動する
+on:
+  push:
+    branches:
+      - main  # メインブランチ名が master の場合は master に変更してください
+    paths:
+      - 'source_images/**'
+
+# Actions (Bot) がリポジトリに書き込めるように権限を付与
+permissions:
+  contents: write
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # Node.js環境のセットアップ
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      # source_images フォルダ内の画像をすべてコンパイル
+      - name: Compile MindAR Targets
+        run: |
+          mkdir -p targets
+          
+          # jpg, jpeg, png 形式のファイルを探してコンパイル
+          for img in source_images/*.{jpg,jpeg,png}; do
+            # 該当ファイルがない場合のエラー回避
+            [ -e "$img" ] || continue
+            
+            # 拡張子を除いたファイル名を取得 (例: test_logo.jpg -> test_logo)
+            filename=$(basename -- "$img")
+            target_name="${filename%.*}"
+            
+            echo "Compiling $img to targets/$target_name.mind ..."
+            npx mindar-image-compiler "$img" "targets/$target_name.mind"
+          done
+
+      # 生成された .mind ファイルをコミット＆プッシュ
+      - name: Commit and Push compiled files
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add targets/
+          git commit -m "Auto-compiled AR targets by GitHub Actions" || echo "No changes to commit"
+          git push
