@@ -1,5 +1,6 @@
-name: Compile Multiple MindAR Targets
+name: Remote Compile MindAR Targets
 
+# API (workflow_dispatch) 経由での実行を許可し、入力を受け取る
 on:
   workflow_dispatch:
     inputs:
@@ -20,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # ★追加: Node.js環境をセットアップする
+      # Node.js環境をセットアップ
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -32,7 +33,6 @@ jobs:
           curl -L "${{ github.event.inputs.image_url }}" -o target_image.jpg
 
       # 2. MindAR コンパイラを実行
-      # ターゲットフォルダが無いとエラーになるので mkdir しておく
       - name: Compile MindAR Target
         run: |
           mkdir -p targets
