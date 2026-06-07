@@ -1,0 +1,48 @@
+name: Compile Multiple MindAR Targets
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_url:
+        description: 'Target Image URL to compile'
+        required: true
+      target_name:
+        description: 'Output name for the mind file'
+        required: true
+
+# GITHUB_TOKEN にコードを書き換える権限を与える
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # ★追加: Node.js環境をセットアップする
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      # 1. コンソールから送られてきた画像をダウンロード
+      - name: Download Target Image
+        run: |
+          curl -L "${{ github.event.inputs.image_url }}" -o target_image.jpg
+
+      # 2. MindAR コンパイラを実行
+      # ターゲットフォルダが無いとエラーになるので mkdir しておく
+      - name: Compile MindAR Target
+        run: |
+          mkdir -p targets
+          npx mindar-image-compiler target_image.jpg targets/${{ github.event.inputs.target_name }}.mind
+
+      # 3. コンパイルされた.mindファイルをリポジトリにCommit & Push
+      - name: Commit and Push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add targets/${{ github.event.inputs.target_name }}.mind
+          git commit -m "Auto-compiled AR target: ${{ github.event.inputs.target_name }}" || echo "No changes to commit"
+          git push
