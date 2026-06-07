@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VOID AR VIEWER</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
+      #error-msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: red; font-family: monospace; z-index: 9999; display: none; }
+    </style>
+  </head>
+  <body>
+    <div id="error-msg">INVALID AR PARAMETERS</div>
+
+    <script>
+      // 1. URLパラメータの取得
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetName = urlParams.get('target');
+      const objType = urlParams.get('type');
+      const objFile = urlParams.get('file');
+
+      if (!targetName || !objType || !objFile) {
+        document.getElementById('error-msg').style.display = 'block';
+      } else {
+        // パラメータが正常な場合、A-Frameのシーンを動的に生成する
+        
+        // mindARのコンパイル済みファイルのパス
+        const mindFileUrl = `targets/${targetName}.mind`;
+        
+        // オブジェクトのパスを決定
+        let objPath = '';
+        if (objType === 'glb') objPath = `assets/glb/${objFile}`;
+        else if (objType === 'video') objPath = `assets/video/${objFile}`;
+        else if (objType === 'image') objPath = `assets/images/${objFile}`;
+
+        // 動的にDOMを構築
+        const sceneEl = document.createElement('a-scene');
+        sceneEl.setAttribute('mindar-image', `imageTargetSrc: ${mindFileUrl};`);
+        sceneEl.setAttribute('color-space', 'sRGB');
+        sceneEl.setAttribute('renderer', 'colorManagement: true, physicallyCorrectLights');
+        sceneEl.setAttribute('vr-mode-ui', 'enabled: false');
+        sceneEl.setAttribute('device-orientation-permission-ui', 'enabled: false');
+
+        const assetsEl = document.createElement('a-assets');
+        const targetEl = document.createElement('a-entity');
+        targetEl.setAttribute('mindar-image-target', 'targetIndex: 0');
+
+        // タイプ別の要素生成
+        if (objType === 'glb') {
+            const item = document.createElement('a-asset-item');
+            item.setAttribute('id', 'modelAsset');
+            item.setAttribute('src', objPath);
+            assetsEl.appendChild(item);
+
+            const model = document.createElement('a-gltf-model');
+            model.setAttribute('rotation', '0 0 0');
+            model.setAttribute('position', '0 0 0');
+            model.setAttribute('scale', '1 1 1');
+            model.setAttribute('src', '#modelAsset');
+            targetEl.appendChild(model);
+
+        } else if (objType === 'video') {
+            const video = document.createElement('video');
+            video.setAttribute('id', 'videoAsset');
+            video.setAttribute('src', objPath);
+            video.setAttribute('preload', 'auto');
+            video.setAttribute('loop', 'true');
+            video.setAttribute('crossorigin', 'anonymous');
+            video.setAttribute('playsinline', 'true'); // iOS対応必須
+            video.setAttribute('webkit-playsinline', 'true');
+            assetsEl.appendChild(video);
+
+            const videoModel = document.createElement('a-video');
+            videoModel.setAttribute('src', '#videoAsset');
+            videoModel.setAttribute('position', '0 0 0');
+            videoModel.setAttribute('width', '1');
+            videoModel.setAttribute('height', '0.5625'); // 16:9の比率
+            targetEl.appendChild(videoModel);
+
+            // 動画はユーザー操作がないと再生されないため、マーカー検出時に再生する
+            targetEl.addEventListener("targetFound", () => {
+                document.querySelector('#videoAsset').play();
+            });
+            targetEl.addEventListener("targetLost", () => {
+                document.querySelector('#videoAsset').pause();
+            });
+
+        } else if (objType === 'image') {
+            const img = document.createElement('img');
+            img.setAttribute('id', 'imageAsset');
+            img.setAttribute('src', objPath);
+            img.setAttribute('crossorigin', 'anonymous');
+            assetsEl.appendChild(img);
+
+            const imageModel = document.createElement('a-image');
+            imageModel.setAttribute('src', '#imageAsset');
+            imageModel.setAttribute('position', '0 0 0');
+            imageModel.setAttribute('width', '1');
+            imageModel.setAttribute('height', '1');
+            targetEl.appendChild(imageModel);
+        }
+
+        const cameraEl = document.createElement('a-camera');
+        cameraEl.setAttribute('position', '0 0 0');
+        cameraEl.setAttribute('look-controls', 'enabled: false');
+
+        sceneEl.appendChild(assetsEl);
+        sceneEl.appendChild(targetEl);
+        sceneEl.appendChild(cameraEl);
+        
+        document.body.appendChild(sceneEl);
+      }
+    </script>
+  </body>
+</html>
